@@ -1,4 +1,3 @@
-```markdown
 # Výkaz práce
 
 Jednoduchý webový systém pro správu a generování výkazů práce zaměstnanců. Aplikace umožňuje správu uživatelů, evidence pracovních směn a generování PDF reportů.
@@ -77,7 +76,7 @@ CREATE TABLE IF NOT EXISTS `janbrunclik_vykaz_prace_pracovni_vykaz` (
   KEY `id_zamestnance` (`id_zamestnance`),
   CONSTRAINT `janbrunclik_vykaz_prace_pracovni_vykaz_ibfk_1` FOREIGN KEY (`id_zamestnance`) REFERENCES `janbrunclik_vykaz_prace_uzivatele` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
+```
 
 1. **Generování PDF výkazu**:
    - Vyberte zaměstnance, měsíc a rok
@@ -130,4 +129,3 @@ V případě problémů nebo dotazů kontaktujte:
 ## Licence
 
 Copyright (C) Jan Brunclík
-```
