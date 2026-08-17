@@ -1,131 +1,120 @@
-# Výkaz práce
+# Výkaz práce (v4.0)
 
-Jednoduchý webový systém pro správu a generování výkazů práce zaměstnanců. Aplikace umožňuje správu uživatelů, evidence pracovních směn a generování PDF reportů.
+Moderní, bezpečná a modulární webová aplikace pro správu a generování výkazů práce zaměstnanců. Projekt byl zrefaktorován z monolitického PHP do podoby **Single Page Application (SPA)** s odděleným **REST API** na backendu a asynchronní komunikací na frontendu.
 
-## Verze
+## Hlavní přednosti a nové funkce
 
-3.2
+- **Moderní architektura (OOP backend):** Kód je rozčleněn podle osvědčených návrhových vzorů (Controllers, Services, Repositories, Database Singleton a Router).
+- **Asynchronní klientský JavaScript (Fetch API):** Veškerá komunikace s API probíhá na pozadí. Stránka se po přihlášení nikdy celá nepřenačítá, což zajišťuje bleskovou odezvu.
+- **Hromadná editace směn:** Nový tabulkový editor pro celý měsíc najednou. Zaměstnanec nebo administrátor může pohodlně vyplnit či upravit časy pro všechny dny v měsíci a uložit je jedním tlačítkem. Smazání směny se provádí jednoduše vymazáním časů.
+- **Oprava výpočtu nočních směn (přechod přes půlnoc):** Výpočet odpracovaných hodin korektně funguje i pro směny přesahující do dalšího dne (např. 22:00 - 06:00). Započtení 24h korekce a automatické odečtení 0,5 hodiny pauzy je aplikováno jak v grafech/tabulkách, tak v generovaném PDF.
+- **Bezpečnost na prvním místě:**
+  - Hesla jsou bezpečně hashována pomocí `password_hash()` a ověřována přes `password_verify()`.
+  - Ochrana proti CSRF útokům prostřednictvím hlavičky `X-CSRF-Token` pro všechny změnové požadavky.
+  - Všechny vstupy jsou validovány, sanitovány a databázové dotazy jsou chráněny pomocí prepared statements (PDO).
+  - Přihlašování je založeno na bezpečné PHP Session s nastavením `httponly` a `SameSite=Strict`.
+- **Kontrola rolí (RBAC):**
+  - **Běžný zaměstnanec (`employee`):** Vidí, spravuje a stahuje PDF výkazy výhradně pro své vlastní směny.
+  - **Administrátor (`admin`):** Má přístup k úplné správě uživatelů (přidávání, úprava, mazání, změna rolí a hesel) a může spravovat a generovat výkazy pro všechny zaměstnance v systému.
 
-## Funkce
+---
 
-- **Správa uživatelů**: Přidávání, úprava a mazání zaměstnanců s jejich osobními údaji
-- **Evidence pracovních směn**: Záznamy o začátku a konci směn, poznámky a označení nočních směn
-- **Generování PDF výkazů**: Automatické generování měsíčních výkazů práce s přehlednou tabulkou
-- **Filtrování dat**: Možnost filtrovat záznamy podle měsíce, roku a zaměstnance
-- **Responzivní design**: Optimalizováno pro použití na desktopových i mobilních zařízeních
+## Přehled REST API Endpointů
 
-## Požadavky
+Všechny API požadavky vrací standardizované odpovědi ve formátu JSON.
 
-- PHP 8.3.21 nebo vyšší
+| Metoda | Endpoint | Popis | Vyžaduje roli |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/api/auth/login` | Přihlášení uživatele (vrací údaje a CSRF token) | Nepřihlášený |
+| **POST** | `/api/auth/logout` | Odhlášení uživatele | Přihlášený |
+| **GET** | `/api/auth/me` | Ověření přihlášení a získání detailu uživatele | Přihlášený |
+| **GET** | `/api/shifts` | Seznam směn (podporuje filtry `employee_id`, `month`, `year`) | Přihlášený (role omezena) |
+| **POST** | `/api/shifts` | Vytvoření nové samostatné směny | Přihlášený (role omezena) |
+| **PUT** | `/api/shifts/{id}` | Aktualizace konkrétní směny | Přihlášený (role omezena) |
+| **DELETE** | `/api/shifts/{id}` | Smazání konkrétní směny | Přihlášený (role omezena) |
+| **POST** | `/api/shifts/bulk` | Hromadné uložení/úprava směn pro celý měsíc v transakci | Přihlášený (role omezena) |
+| **GET** | `/api/users` | Seznam uživatelů v systému | Přihlášený (role omezena) |
+| **GET** | `/api/users/{id}` | Detail konkrétního uživatele | Pouze administrátor |
+| **POST** | `/api/users` | Vytvoření nového uživatele | Pouze administrátor |
+| **PUT** | `/api/users/{id}` | Aktualizace uživatele (včetně volitelné změny hesla) | Pouze administrátor |
+| **DELETE** | `/api/users/{id}` | Smazání uživatele (chráněno proti smazání sebe sama a uživatelů se směnami) | Pouze administrátor |
+
+---
+
+## Struktura projektu
+
+Projekt je navržen s ohledem na čistou architekturu, modularitu a snadnou přenositelnost.
+
+```text
+vykaz-prace/
+├── composer.json               # Konfigurace Composer závislostí
+├── config.php                  # Konfigurační soubor připojení k databázi
+├── index.php                   # Jednotný vstupní bod (API router / SPA šablona)
+├── migrate.php                 # PHP skript pro spuštění DB migrací
+├── db.sql                      # Základní SQL schéma databáze
+├── db_update.sql               # SQL migrační skript (sloupec 'role')
+├── css/
+│   └── style.css               # Moderní responzivní Mobile-first design
+├── js/
+│   ├── api.js                  # Asynchronní API klient (včetně CSRF ochrany)
+│   └── app.js                  # Klientská správa stavu, vykreslování tabulek a modalů
+└── src/                        # OOP Zdrojové kódy backendu (PSR-4)
+    ├── Core/
+    │   ├── Database.php        # Databázové připojení přes Singleton (PDO)
+    │   ├── Router.php          # REST API Router
+    │   ├── Session.php         # Správa relací, přihlášení a autorizace
+    │   └── CSRF.php            # Generování a ověřování CSRF tokenů
+    ├── Repository/
+    │   ├── UserRepository.php  # Databázové operace pro tabulku uživatelů
+    │   └── ShiftRepository.php # Databázové operace pro tabulku směn
+    ├── Service/
+    │   ├── ShiftService.php    # Business logika směn (výpočet nočních, bulk save transakce)
+    │   └── PdfService.php      # Služba pro generování PDF výkazu práce (TCPDF)
+    └── Controller/
+        ├── BaseController.php  # Společný předek kontrolerů (validace, JSON odpovědi)
+        ├── AuthController.php  # Přihlašování a odhlašování uživatelů
+        ├── ShiftController.php # Správa směn a bulk operace
+        ├── UserController.php  # Kompletní administrace uživatelů
+        └── PdfController.php   # Generátor PDF ke stažení
+```
+
+---
+
+## Požadavky a instalace
+
+### Požadavky:
+- PHP 8.2+
 - MySQL/MariaDB databáze
-- Composer (pro instalaci TCPDF)
-- Webový server (Apache, Nginx, atd.)
+- Composer (pro stažení knihovny TCPDF)
 
-## Instalace
-
-1. **Klonování repozitáře**:
+### Postup instalace:
+1. **Klonování repozitáře:**
    ```bash
-   git clone https://github.com/vas-uzivatel/vykaz-prace.git
+   git clone https://github.com/janbrunclikreal/vykaz-prace.git
    cd vykaz-prace
    ```
-
-2. **Instalace závislostí**:
+2. **Instalace knihoven přes Composer:**
    ```bash
    composer install
    ```
+3. **Konfigurace databáze:**
+   - Vytvořte novou databázi v MySQL/MariaDB.
+   - Importujte soubor `db.sql`.
+   - Upravte soubor `config.php` s přihlašovacími údaji k vaší databázi.
+4. **Spuštění databázových migrací:**
+   Spusťte migrační skript pro přidání sloupce `role`:
+   ```bash
+   php migrate.php
+   ```
+5. **Výchozí administrátorský účet:**
+   Migrační skript automaticky nastaví prvnímu uživateli v databázi roli `admin`.
 
-3. **Nastavení databáze**:
-   - Vytvořte databázi v MySQL/MariaDB
-   - Upravte soubor `config.php` s přihlašovacími údaji k databázi
-   - Spusťte SQL skript pro vytvoření tabulek (viz sekce Databáze)
+---
 
-4. **Nastavení webového serveru**:
-   - Nasměrujte váš webový server na adresář s projektem
-   - Ujistěte se, že PHP má oprávnění zapisovat do adresáře
+## Podpora a licence
 
-## Databáze
-
-Vytvořte tabulky pomocí následujícího SQL skriptu:
-
-```sql
--- Tabulka pro uživatele
-CREATE TABLE IF NOT EXISTS `janbrunclik_vykaz_prace_uzivatele` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `jmeno` varchar(50) NOT NULL,
-  `prijmeni` varchar(50) NOT NULL,
-  `email` varchar(100) NOT NULL,
-  `telefon` varchar(20) DEFAULT NULL,
-  `heslo` varchar(255) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Tabulka pro pracovní výkazy
-CREATE TABLE IF NOT EXISTS `janbrunclik_vykaz_prace_pracovni_vykaz` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `id_zamestnance` int(11) NOT NULL,
-  `datum` date NOT NULL,
-  `cas_zacatku` time NOT NULL DEFAULT '07:00:00',
-  `cas_konce` time NOT NULL DEFAULT '19:00:00',
-  `poznamka` varchar(255) DEFAULT NULL,
-  `noni` tinyint(1) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `id_zamestnance` (`id_zamestnance`),
-  CONSTRAINT `janbrunclik_vykaz_prace_pracovni_vykaz_ibfk_1` FOREIGN KEY (`id_zamestnance`) REFERENCES `janbrunclik_vykaz_prace_uzivatele` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-
-1. **Generování PDF výkazu**:
-   - Vyberte zaměstnance, měsíc a rok
-   - Klikněte na "Generovat PDF"
-   - Systém automaticky stáhne PDF soubor s výkazem práce
-
-2. **Správa dat**:
-   - Přidejte nové záznamy o pracovních směnách
-   - Upravte existující záznamy
-   - Smažte nepotřebné záznamy
-   - Filtrování dat podle různých kritérií
-
-3. **Správa uživatelů**:
-   - Přidejte nové zaměstnance
-   - Upravte osobní údaje existujících zaměstnanců
-   - Spravujte přístupové údaje
-
-### Výchozí hodnoty
-
-- Výchozí začátek směny: 07:00:00
-- Výchozí konec směny: 19:00:00
-- Výpočet odpracovaných hodin automaticky odečítá 0.5 hodiny pauzy
-
-## Struktura souborů
-
-```
-vykaz-prace/
-├── index.php              # Hlavní soubor aplikace
-├── config.php             # Konfigurační soubor databáze
-├── composer.json          # Konfigurace Composer
-├── README.md              # Tento soubor
-└── vendor/                # Instalované závislosti (TCPDF)
-```
-
-## Bezpečnost
-
-- Všechny vstupy jsou validovány a ošetřeny proti SQL injection pomocí prepared statements
-- Hesla jsou bezpečně hashována pomocí funkce password_hash()
-- Aplikace používá UTF-8 kódování pro správné zobrazení českých znaků
-
-## Kompatibilita
-
-Aplikace je plně funkční v prostředí Android KSWEB s PHP 8.3.21.
-
-## Podpora
-
-V případě problémů nebo dotazů kontaktujte:
-- Email: janbrunclikreal@gmail.com
-
-## Licence
+V případě dotazů, chyb nebo žádostí o podporu kontaktujte vývojáře:
+- **E-mail:** janbrunclikreal@gmail.com
+- **Autor:** Jan Brunclík
 
 Copyright (C) Jan Brunclík
