@@ -1158,7 +1158,8 @@ function dataManagement() {
     
     <div class="filter-container">
         <form method="GET" action="?action=data_management" class="filter-form">
-            <div class="filter-group">
+            	<input type="hidden" name="action" value="data_management">
+		<div class="filter-group">
                 <label for="filter_mesic">Měsíc:</label>
                 <select id="filter_mesic" name="filter_mesic">
                     <option value="0">Všechny</option>
@@ -1179,7 +1180,7 @@ function dataManagement() {
             
             <div class="filter-group">
                 <label for="filter_rok">Rok:</label>
-                <input type="number" id="filter_rok" name="filter_rok" value="<?php echo $rok; ?>" min="2000" max="2100">
+                <input type="number" id="filter_rok" name="filter_rok" value="<?php echo $rok; ?>" min="2025" max="2030">
             </div>
             
             <div class="filter-group">
