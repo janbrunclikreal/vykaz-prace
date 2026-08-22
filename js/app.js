@@ -35,15 +35,15 @@ const App = {
         // Filtry směn
         document.getElementById('filter-employee')?.addEventListener('change', (e) => {
             this.filters.employee_id = parseInt(e.target.value) || 0;
-            this.loadShifts();
+            this.handleFilterChange();
         });
         document.getElementById('filter-month')?.addEventListener('change', (e) => {
             this.filters.month = parseInt(e.target.value) || 1;
-            this.loadShifts();
+            this.handleFilterChange();
         });
         document.getElementById('filter-year')?.addEventListener('change', (e) => {
             this.filters.year = parseInt(e.target.value) || 2026;
-            this.loadShifts();
+            this.handleFilterChange();
         });
 
         // PDF generátor tlačítko
@@ -193,6 +193,14 @@ const App = {
         }
     },
 
+    handleFilterChange() {
+        if (this.activeTab === 'bulk') {
+            this.initBulkEditor();
+        } else {
+            this.loadShifts();
+        }
+    },
+
     async loadShifts() {
         this.clearAlerts();
         try {
@@ -269,6 +277,15 @@ const App = {
             const data = await API.get(`/api/shifts?employee_id=${this.filters.employee_id}&month=${this.filters.month}&year=${this.filters.year}`);
             const existingShifts = data.shifts;
             
+            // Dynamický a jasný nadpis editovaného období
+            const monthsCs = ['Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen', 'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'];
+            const emp = this.users.find(u => u.id === this.filters.employee_id);
+            const empName = emp ? `${emp.prijmeni}, ${emp.jmeno}` : '';
+            const titleEl = document.getElementById('bulk-title-text');
+            if (titleEl) {
+                titleEl.innerText = `Hromadný tabulkový editor: ${monthsCs[this.filters.month - 1]} ${this.filters.year} – ${empName}`;
+            }
+
             // Sestavení mapy datum -> směna
             const shiftMap = {};
             existingShifts.forEach(s => {

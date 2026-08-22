@@ -187,7 +187,7 @@ if (str_starts_with($requestPath, '/generate-pdf')) {
             <section id="section-bulk" style="display: none;">
                 <div class="card">
                     <div class="card-title">
-                        <span>Hromadný tabulkový editor měsíce</span>
+                        <span id="bulk-title-text">Hromadný tabulkový editor měsíce</span>
                         <button id="bulk-save-btn" class="btn btn-success">Uložit celý měsíc</button>
                     </div>
                     <p style="margin-bottom: 15px; font-size: 14px; color: var(--text-muted);">
